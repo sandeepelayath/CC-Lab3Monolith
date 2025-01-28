@@ -1,50 +1,51 @@
-import json
-
-import products
-from cart import dao
-from products import Product
+from products import dao
 
 
-class Cart:
-    def __init__(self, id: int, username: str, contents: list[Product], cost: float):
+class Product:
+    def __init__(self, id: int, name: str, description: str, cost: float, qty: int = 0):
         self.id = id
-        self.username = username
-        self.contents = contents
+        self.name = name
+        self.description = description
         self.cost = cost
+        self.qty = qty
 
-    def load(data):
-        return Cart(data['id'], data['username'], data['contents'], data['cost'])
+    @staticmethod
+    def load(data: dict) -> "Product":
+        return Product(data['id'], data['name'], data['description'], data['cost'], data['qty'])
 
 
-def get_cart(username: str) -> list:
-    cart_details = dao.get_cart(username)
-    if cart_details is None:
+def list_products() -> list[Product]:
+    try:
+        products = dao.list_products()
+        return [Product.load(product) for product in products]
+    except Exception as e:
+        print(f"Error listing products: {e}")
         return []
-    
-    items = []
-    for cart_detail in cart_details:
-        contents = cart_detail['contents']
-        evaluated_contents = eval(contents)  
-        for content in evaluated_contents:
-            items.append(content)
-    
-    i2 = []
-    for i in items:
-        temp_product = products.get_product(i)
-        i2.append(temp_product)
-    return i2
-
-    
 
 
-def add_to_cart(username: str, product_id: int):
-    dao.add_to_cart(username, product_id)
+def get_product(product_id: int) -> Product:
+    try:
+        return Product.load(dao.get_product(product_id))
+    except Exception as e:
+        print(f"Error fetching product with ID {product_id}: {e}")
+        raise
 
 
-def remove_from_cart(username: str, product_id: int):
-    dao.remove_from_cart(username, product_id)
+def add_product(product: dict):
+    if not all(key in product for key in ['id', 'name', 'description', 'cost', 'qty']):
+        raise ValueError("Invalid product data. Missing required fields.")
+    try:
+        dao.add_product(product)
+    except Exception as e:
+        print(f"Error adding product: {e}")
+        raise
 
-def delete_cart(username: str):
-    dao.delete_cart(username)
 
-
+def update_qty(product_id: int, qty: int):
+    if qty < 0:
+        raise ValueError('Quantity cannot be negative')
+    try:
+        dao.update_qty(product_id, qty)
+    except Exception as e:
+        print(f"Error updating quantity for product ID {product_id}: {e}")
+        raise
